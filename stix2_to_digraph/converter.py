@@ -18,6 +18,7 @@ from typing import Iterable, Union
 
 CREATED = "created"
 MODIFIED = "modified"
+RELATED_TO = "related-to"
 
 
 @dataclass()
@@ -25,6 +26,7 @@ class Converter:
     data_source: Union[str, MemoryStore, DataSource]
     add_created_by_ref: bool = False
     add_modified_by_ref: bool = False
+    add_external_references: bool = False
 
     def __post_init__(self):
         self.data_source = get_data_source(self.data_source)
@@ -54,10 +56,15 @@ class Converter:
                     g.add_edge(a, o["id"], label=CREATED)
 
             if self.add_modified_by_ref:
-                a = o.get("modified_by_ref")
+                a = o.get("x_mitre_modified_by_ref")
                 if a:
                     g.add_edge(a, o["id"], label=MODIFIED)
 
+            if self.add_external_references:
+                for ref in o.get("external_references", []):
+                    url = ref.get("url")
+                    if url:
+                        g.add_edge(url, o["id"], label=RELATED_TO)
         return g
 
 
