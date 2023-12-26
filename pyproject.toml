@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "stix2-to-digraph"
+version = "1.0.0"
+description = "Import STIX 2 content into NetworkX"
+authors = ["Tyler Fisher <tylerfisher@tylerfisher.ca>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "stix2_to_digraph"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+networkx = "^3.1"
+stix2 = "^3.0.1"
+taxii2-client = "^2.3.0"
+requests = "^2.31.0"
+click = "^8.1.7"
+
+[tool.poetry.scripts]
+stix2-to-digraph = "stix2_to_digraph.cli:main"
+converter = "stix2_to_digraph.cli:main"
+tool = "stix2_to_digraph.cli:main"
+script = "stix2_to_digraph.cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
