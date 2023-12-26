@@ -26,7 +26,6 @@ class Converter:
     data_source: Union[str, MemoryStore, DataSource]
     add_created_by_ref: bool = False
     add_modified_by_ref: bool = False
-    add_external_references: bool = False
 
     def __post_init__(self):
         self.data_source = get_data_source(self.data_source)
@@ -34,37 +33,39 @@ class Converter:
     def stix2_to_networkx(
         self, query: Optional[str] = None, compact: bool = True
     ) -> nx.DiGraph:
-        objects = tuple(self.data_source.query(query))
-        if compact:
-            return self._stix2_to_compact_networkx(objects)
-        else:
-            raise NotImplementedError()
+        """
+        Creates a nx.DiGraph from a list of STIX 2 objects.
 
-    def _stix2_to_compact_networkx(self, objects: Iterable[dict]) -> nx.DiGraph:
+        - Nodes only contain IDs or URLs
+        - Edges only contain labels
+        """
         g = nx.DiGraph()
+        objects = self.data_source.query(query)
         for o in objects:
-            if o["type"] == "relationship":
-                a = o["source_ref"]
-                b = o["target_ref"]
-                g.add_edge(a, b, label=o["relationship_type"])
+            stix2_id = o["id"]
+            if compact:
+                g.add_node(stix2_id)
             else:
-                g.add_node(o["id"])
+                g.add_node(stix2_id, **o)
+
+            if o["type"] == "relationship":
+                g.add_edge(
+                    o["source_ref"],
+                    o["target_ref"],
+                    relationship_type=o["relationship_type"],
+                )
+            else:
+                g.add_node(stix2_id)
 
             if self.add_created_by_ref:
-                a = o.get("created_by_ref")
-                if a:
-                    g.add_edge(a, o["id"], label=CREATED)
+                created_by = o.get("created_by_ref")
+                if created_by:
+                    g.add_edge(created_by, stix2_id, relationship_type=CREATED)
 
             if self.add_modified_by_ref:
-                a = o.get("x_mitre_modified_by_ref")
-                if a:
-                    g.add_edge(a, o["id"], label=MODIFIED)
-
-            if self.add_external_references:
-                for ref in o.get("external_references", []):
-                    url = ref.get("url")
-                    if url:
-                        g.add_edge(url, o["id"], label=RELATED_TO)
+                modified_by = o.get("x_mitre_modified_by_ref")
+                if modified_by:
+                    g.add_edge(modified_by, stix2_id, relationship_type=MODIFIED)
         return g
 
 
