@@ -24,21 +24,49 @@ def get_triples(
     """
     Get triples.
     """
-    if not paths:
-        raise click.UsageError("No data sources specified")
-
-    data_source = converter.get_data_source(paths)
-    rows = tuple(
-        converter.iter_stix2_objects(
-            data_source=data_source,
-            ignore_deprecated=allow_deprecated is False,
-            ignore_revoked=allow_revoked is False,
-        )
+    rows = iter_objects(
+        paths=paths, allow_deprecated=allow_deprecated, allow_revoked=allow_revoked
     )
     g = converter.stix2_objects_to_networkx(rows)
     triples = converter.nx_digraph_to_triples(g)
     for a, t, b in triples:
         print(f"{a} {t} {b}")
+
+
+@main.command("quads")
+@click.argument("namespace", required=True)
+@click.argument("paths", nargs=-1, type=click.Path(exists=True))
+@click.option("--allow-deprecated/--no-deprecated", default=False, show_default=True)
+@click.option("--allow-revoked/--no-revoked", default=False, show_default=True)
+def get_quads(
+    namespace: str,
+    paths: Iterable[str],
+    allow_deprecated: bool,
+    allow_revoked: bool,
+):
+    """
+    Get quads.
+    """
+    rows = iter_objects(
+        paths=paths, allow_deprecated=allow_deprecated, allow_revoked=allow_revoked
+    )
+    g = converter.stix2_objects_to_networkx(rows)
+    triples = converter.nx_digraph_to_triples(g)
+    for a, t, b in triples:
+        print(f"{namespace} {a} {t} {b}")
+
+
+def iter_objects(paths: Iterable[str], allow_deprecated: bool, allow_revoked: bool):
+    if not paths:
+        raise click.UsageError("No data sources specified")
+
+    data_source = converter.get_data_source(paths)
+    rows = converter.iter_stix2_objects(
+        data_source=data_source,
+        ignore_deprecated=allow_deprecated is False,
+        ignore_revoked=allow_revoked is False,
+    )
+    yield from rows
 
 
 @main.command("alias-map")
