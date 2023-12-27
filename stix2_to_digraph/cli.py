@@ -16,10 +16,14 @@ def main(ctx: click.Context, indent: int):
 @click.argument("paths", nargs=-1, type=click.Path(exists=True))
 @click.option("--allow-deprecated/--no-deprecated", default=False, show_default=True)
 @click.option("--allow-revoked/--no-revoked", default=False, show_default=True)
+@click.option("--separator", default=" ", show_default=True)
+@click.option("--tabs", is_flag=True)
 def get_triples(
     paths: Iterable[str],
     allow_deprecated: bool,
     allow_revoked: bool,
+    separator: str,
+    tabs: bool,
 ):
     """
     Get triples.
@@ -29,8 +33,10 @@ def get_triples(
     )
     g = converter.stix2_objects_to_networkx(rows)
     triples = converter.nx_digraph_to_triples(g)
+
+    separator = "\t" if tabs else separator
     for a, t, b in triples:
-        print(f"{a} {t} {b}")
+        print(f"{a}{separator}{t}{separator}{b}")
 
 
 @main.command("quads")
@@ -43,6 +49,8 @@ def get_quads(
     paths: Iterable[str],
     allow_deprecated: bool,
     allow_revoked: bool,
+    separator: str,
+    tabs: bool,
 ):
     """
     Get quads.
@@ -52,8 +60,10 @@ def get_quads(
     )
     g = converter.stix2_objects_to_networkx(rows)
     triples = converter.nx_digraph_to_triples(g)
+
+    separator = "\t" if tabs else separator
     for a, t, b in triples:
-        print(f"{namespace} {a} {t} {b}")
+        print(f"{namespace}{separator}{a}{separator}{t}{separator}{b}")
 
 
 def iter_objects(paths: Iterable[str], allow_deprecated: bool, allow_revoked: bool):
