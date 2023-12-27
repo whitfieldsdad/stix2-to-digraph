@@ -12,6 +12,35 @@ def main(ctx: click.Context, indent: int):
     ctx.obj = {"indent": indent}
 
 
+@main.command("triples")
+@click.argument("paths", nargs=-1, type=click.Path(exists=True))
+@click.option("--allow-deprecated/--no-deprecated", default=False, show_default=True)
+@click.option("--allow-revoked/--no-revoked", default=False, show_default=True)
+def get_triples(
+    paths: Iterable[str],
+    allow_deprecated: bool,
+    allow_revoked: bool,
+):
+    """
+    Get triples.
+    """
+    if not paths:
+        raise click.UsageError("No data sources specified")
+
+    data_source = converter.get_data_source(paths)
+    rows = tuple(
+        converter.iter_stix2_objects(
+            data_source=data_source,
+            ignore_deprecated=allow_deprecated is False,
+            ignore_revoked=allow_revoked is False,
+        )
+    )
+    g = converter.stix2_objects_to_networkx(rows)
+    triples = converter.nx_digraph_to_triples(g)
+    for a, t, b in triples:
+        print(f"{a} {t} {b}")
+
+
 @main.command("alias-map")
 @click.argument("paths", nargs=-1, type=click.Path(exists=True))
 @click.option("--allow-deprecated/--no-deprecated", default=False, show_default=True)

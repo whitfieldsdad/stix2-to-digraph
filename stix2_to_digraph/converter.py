@@ -3,7 +3,7 @@ import copy
 import dataclasses
 import json
 import sys
-from typing import Any, Dict, Iterable, Iterator, Optional, Union
+from typing import Any, Dict, Iterable, Iterator, Optional, Tuple, Union
 import networkx as nx
 from stix2.datastore import DataSource
 from dataclasses import dataclass
@@ -91,7 +91,7 @@ def filter_stix2_objects(
     if ignore_deprecated:
         objects = filter(lambda o: o.get("x_mitre_deprecated") is not True, objects)
         objects = filter(
-            lambda o: o.get("x_capec_status", "").lower() is not "deprecated", objects
+            lambda o: o.get("x_capec_status", "").lower() != "deprecated", objects
         )
 
     if ignore_revoked:
@@ -277,15 +277,11 @@ def realpath(path: str) -> str:
 
 
 def stix2_objects_to_dicts(rows: Iterable[Any]) -> Iterator[dict]:
-    with ThreadPoolExecutor() as executor:
-        futures = []
-        for row in rows:
-            if isinstance(row, dict):
-                yield row
-            else:
-                future = executor.submit(stix2_objects_to_dict, row)
-                futures.append(future)
-        yield from (future.result() for future in futures)
+    for row in rows:
+        if isinstance(row, dict):
+            yield row
+        else:
+            yield stix2_objects_to_dict(row)
 
 
 def stix2_objects_to_dict(o: Any) -> dict:
@@ -316,3 +312,12 @@ def summarize_digraph(g: nx.DiGraph) -> DiGraphSummary:
         total_nodes=g.number_of_nodes(),
         total_edges=g.number_of_edges(),
     )
+
+
+def nx_digraph_to_triples(g: nx.DiGraph) -> Iterator[Tuple[str, str, str]]:
+    for a, b, data in g.edges(data=True):
+        label = data.get("relationship_type")
+        if not label:
+            continue
+
+        yield a, label, b
