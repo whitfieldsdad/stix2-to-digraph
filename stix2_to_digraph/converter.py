@@ -315,6 +315,11 @@ def summarize_digraph(g: nx.DiGraph) -> DiGraphSummary:
 
 
 def nx_digraph_to_triples(g: nx.DiGraph) -> Iterator[Tuple[str, str, str]]:
+    triples = _nx_digraph_to_triples(g)
+    yield from sorted(triples)
+
+
+def _nx_digraph_to_triples(g: nx.DiGraph) -> Iterator[Tuple[str, str, str]]:
     for a, b, data in g.edges(data=True):
         label = data.get("relationship_type")
         if not label:

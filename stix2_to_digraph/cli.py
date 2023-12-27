@@ -13,10 +13,10 @@ def main(ctx: click.Context, indent: int):
 
 
 @main.command("triples")
-@click.argument("paths", nargs=-1, type=click.Path(exists=True))
+@click.argument("paths", nargs=-1)
 @click.option("--allow-deprecated/--no-deprecated", default=False, show_default=True)
 @click.option("--allow-revoked/--no-revoked", default=False, show_default=True)
-@click.option("--separator", default=" ", show_default=True)
+@click.option("--separator", default="\t", show_default=True)
 @click.option("--tabs", is_flag=True)
 def get_triples(
     paths: Iterable[str],
@@ -40,13 +40,15 @@ def get_triples(
 
 
 @main.command("quads")
-@click.argument("namespace", required=True)
-@click.argument("paths", nargs=-1, type=click.Path(exists=True))
+@click.argument("paths", nargs=-1)
+@click.option("--namespace", required=True)
 @click.option("--allow-deprecated/--no-deprecated", default=False, show_default=True)
 @click.option("--allow-revoked/--no-revoked", default=False, show_default=True)
+@click.option("--separator", default="\t", show_default=True)
+@click.option("--tabs", is_flag=True)
 def get_quads(
-    namespace: str,
     paths: Iterable[str],
+    namespace: str,
     allow_deprecated: bool,
     allow_revoked: bool,
     separator: str,
@@ -79,12 +81,17 @@ def iter_objects(paths: Iterable[str], allow_deprecated: bool, allow_revoked: bo
     yield from rows
 
 
-@main.command("alias-map")
-@click.argument("paths", nargs=-1, type=click.Path(exists=True))
+@main.command("aliases")
+@click.argument("paths", nargs=-1)
 @click.option("--allow-deprecated/--no-deprecated", default=False, show_default=True)
 @click.option("--allow-revoked/--no-revoked", default=False, show_default=True)
 @click.option("--include-names/--no-names", default=True, show_default=True)
 @click.option("--lowercase/--no-lowercase", default=True, show_default=True)
+@click.option(
+    "--output-format", type=click.Choice(["json", "csv", "tsv"]), default="json"
+)
+@click.option("--separator")
+@click.option("--tabs", is_flag=True)
 @click.pass_context
 def get_aliases(
     ctx: click.Context,
@@ -93,9 +100,12 @@ def get_aliases(
     allow_revoked: bool,
     include_names: bool,
     lowercase: bool,
+    output_format: str,
+    separator: Optional[str],
+    tabs: bool,
 ):
     """
-    Get node aliases.
+    Get map of names/aliases/external IDs to object UUIDs.
     """
     if not paths:
         raise click.UsageError("No data sources specified")
@@ -109,4 +119,21 @@ def get_aliases(
         )
     )
     m = converter.get_alias_map(rows, include_names=include_names, lowercase=lowercase)
-    print(json.dumps(m, sort_keys=True, indent=ctx.obj["indent"]))
+    if output_format == "json":
+        print(json.dumps(m, sort_keys=True, indent=ctx.obj["indent"]))
+    elif output_format in ["csv", "tsv"]:
+        separator = "\t" if tabs else separator
+        if separator:
+            pass
+        elif output_format == "csv":
+            separator = ","
+        elif output_format == "tsv":
+            separator = "\t"
+        else:
+            raise click.UsageError(f"Unsupported output format: {output_format}")
+
+        for alias, stix2_id in sorted(m.items()):
+            print(f"{alias}{separator}{stix2_id}")
+
+    else:
+        raise click.UsageError(f"Unsupported output format: {output_format}")
